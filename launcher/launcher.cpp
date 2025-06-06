@@ -32,24 +32,29 @@ enum LaunchTarget {
     DS3,
     ELDEN_RING,
     ARMORED_CORE_6,
+    NIGHTREIGN,
 };
 
 static std::map<LaunchTarget, LaunchTargetParams> launch_targets {
     { DS3, { L"374320", L"Game/DarkSoulsIII.exe", L"config_darksouls3.toml" } },
     { ELDEN_RING, { L"1245620", L"Game/eldenring.exe", L"config_eldenring.toml" } },
-    { ARMORED_CORE_6, { L"1888160", L"Game/armoredcore6.exe", L"config_armoredcore6.toml" } }
+    { ARMORED_CORE_6, { L"1888160", L"Game/armoredcore6.exe", L"config_armoredcore6.toml" } },
+    { NIGHTREIGN, { L"2622380", L"Game/nightreign.exe", L"config_nightreign.toml" } }
 };
 
 static std::map<std::string, LaunchTarget> launch_target_names {
     { "ds3", DS3 },
     { "er", ELDEN_RING },
     { "ac6", ARMORED_CORE_6 },
+    { "ern", NIGHTREIGN },
+
 };
 
 static std::map<std::string, LaunchTarget> exe_names {
     { "DarkSoulsIII.exe", DS3 },
     { "eldenring.exe", ELDEN_RING },
     { "armoredcore6.exe", ARMORED_CORE_6 },
+    { "nightreign.exe", NIGHTREIGN},
 };
 
 namespace platform {
