@@ -69,8 +69,8 @@ jobs:
         id: find_ninja
         run: |
           $ninja_path = (Get-Command ninja).Source
-          if (-not $ninja_path) { Write-Error "Ninja not found"; exit 1 }
-          echo "NINJA_PATH=$ninja_path" >> $env:GITHUB_ENV
+          $ninja_full_path = (Resolve-Path $ninja_path).Path
+          echo "NINJA_PATH=$ninja_full_path" >> $env:GITHUB_ENV
           echo "Ninja found at: $ninja_path"
         shell: pwsh
 
