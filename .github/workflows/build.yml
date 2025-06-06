@@ -68,6 +68,13 @@ jobs:
         shell: bash
       # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly. As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
       - uses: ilammy/msvc-dev-cmd@v1
+      
+      # Setup Ninja explicitly
+      - name: Setup Ninja
+        uses: ashutoshvarma/setup-ninja@master
+        with:
+          version: 1.11.1
+      
       # Run CMake to generate Ninja project files, using the vcpkg's toolchain file to resolve and install the dependencies as specified in vcpkg.json.
 
       - name: Download ScyllaHide
@@ -79,16 +86,20 @@ jobs:
         run: |
           cmake -S "${{ github.workspace }}/src_repo" -B "${{ env.CMAKE_BUILD_DIR }}" -GNinja \
             -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" \
+            -DCMAKE_C_COMPILER=cl.exe \
+            -DCMAKE_CXX_COMPILER=cl.exe \
+            -DCMAKE_MAKE_PROGRAM=ninja.exe \
             -DMODENGINE_DIST_SCYLLA=1 \
             -DMODENGINE_CRASH_REPORT_URL=${{ secrets.MODENGINE_CRASH_REPORT_URL }} \
             -DCPACK_GENERATOR=ZIP \
             -DVCPKG_OVERLAY_PORTS=src_repo/third-party/vcpkg-overlays \
             -DCMAKE_BUILD_TYPE=MinSizeRel
-        shell: bash
+        shell: cmd
 
       - name: Build
         run: |
           cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target package
+        shell: cmd
 
       - name: Show content of workspace at its completion
         run: find $RUNNER_WORKSPACE
