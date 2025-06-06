@@ -92,25 +92,33 @@ jobs:
         shell: pwsh
         working-directory: "${{ github.workspace }}/src_repo"
 
+      # Debug step to check ninja and compiler availability
+      - name: Debug environment
+        run: |
+          where ninja
+          where cl
+          ninja --version
+          cl
+        shell: cmd
+        continue-on-error: true
+
       - name: Install dependencies and generate project files
         run: |
-          cmake -S "${{ github.workspace }}/src_repo" -B "${{ env.CMAKE_BUILD_DIR }}" -GNinja \
+          # Use Visual Studio generator instead of Ninja to avoid ninja path issues
+          cmake -S "${{ github.workspace }}/src_repo" -B "${{ env.CMAKE_BUILD_DIR }}" -G "Visual Studio 17 2022" -A x64 \
             -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" \
             -DMODENGINE_DIST_SCYLLA=1 \
             -DMODENGINE_CRASH_REPORT_URL=${{ secrets.MODENGINE_CRASH_REPORT_URL }} \
             -DCPACK_GENERATOR=ZIP \
             -DVCPKG_OVERLAY_PORTS="${{ github.workspace }}/src_repo/third-party/vcpkg-overlays" \
             -DCMAKE_BUILD_TYPE=MinSizeRel \
-            -DCMAKE_MAKE_PROGRAM="${{ env.VCPKG_ROOT }}/downloads/tools/ninja-1.12.1-windows/ninja.exe" \
-            -DVCPKG_VERBOSE=ON
+            -DVCPKG_VERBOSE=ON \
+            -DVCPKG_INSTALL_OPTIONS=--debug
         shell: bash
-        env:
-          CC: cl
-          CXX: cl
 
       - name: Build
         run: |
-          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target package --verbose
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target package --config MinSizeRel --verbose
 
       - name: Show content of workspace at its completion
         run: find $RUNNER_WORKSPACE
