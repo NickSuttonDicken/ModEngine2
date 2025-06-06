@@ -86,20 +86,16 @@ jobs:
         run: |
           cmake -S "${{ github.workspace }}/src_repo" -B "${{ env.CMAKE_BUILD_DIR }}" -GNinja \
             -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" \
-            -DCMAKE_C_COMPILER=cl.exe \
-            -DCMAKE_CXX_COMPILER=cl.exe \
-            -DCMAKE_MAKE_PROGRAM=ninja.exe \
             -DMODENGINE_DIST_SCYLLA=1 \
             -DMODENGINE_CRASH_REPORT_URL=${{ secrets.MODENGINE_CRASH_REPORT_URL }} \
             -DCPACK_GENERATOR=ZIP \
             -DVCPKG_OVERLAY_PORTS=src_repo/third-party/vcpkg-overlays \
             -DCMAKE_BUILD_TYPE=MinSizeRel
-        shell: cmd
+        shell: bash
 
       - name: Build
         run: |
           cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target package
-        shell: cmd
 
       - name: Show content of workspace at its completion
         run: find $RUNNER_WORKSPACE
