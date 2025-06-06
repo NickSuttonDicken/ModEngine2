@@ -1,0 +1,9 @@
+--- CMakeLists.txt
++++ CMakeLists.txt
+@@ -1,7 +1,7 @@
+-cmake_minimum_required(VERSION 2.8)
++cmake_minimum_required(VERSION 3.5)
+
+ project(CLI11)
+
+ set(CLI11_VERSION_MAJOR 2)

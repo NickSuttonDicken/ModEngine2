@@ -4,7 +4,9 @@ vcpkg_from_github(
     REF 65ede431b8d3d8e3082aa5793155d0e14d1aa2f2
     SHA512 b88279ad3481e7a28d93918195be2f4181c638afd2bbef45430a72a54aea9a317fe993984101833b907f697e4541cb4685394c70a3a9f73e21b3cbf037d482eb
     HEAD_REF main
+    PATCHES fix-cmake-version.patch
 )
+
 
 # 🩹 Patch CMakeLists.txt to support CMake 3.5+
 file(READ "${SOURCE_PATH}/CMakeLists.txt" _contents)
