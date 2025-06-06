@@ -2,7 +2,7 @@
 # Released under the term specified in file LICENSE.txt
 # SPDX short identifier: MIT
 
-# A GitHub workflow using CMake, Ninja and vcpkg.
+# A GitHub workflow using CMake, Ninja, and vcpkg.
 name: hosted-pure-workflow
 on:
   push:
@@ -26,6 +26,7 @@ jobs:
     env:
       CMAKE_BUILD_DIR: ${{ github.workspace }}/builddir/
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      NINJA_PATH: ${{ github.workspace }}/ninja/ninja.exe
 
     steps:
       - uses: actions/checkout@v4
@@ -51,15 +52,12 @@ jobs:
             !${{ env.VCPKG_ROOT }}/buildtrees
             !${{ env.VCPKG_ROOT }}/packages
             !${{ env.VCPKG_ROOT }}/downloads
-          key: vcpkg-${{ matrix.triplet }}-${{ hashFiles('src_repo/vcpkg.json') }}-2024.11.16-v3
+          key: vcpkg-${{ matrix.triplet }}-${{ hashFiles('src_repo/vcpkg.json') }}-2024.11.16-v4
           restore-keys: |
             vcpkg-${{ matrix.triplet }}-${{ hashFiles('src_repo/vcpkg.json') }}-
 
-      - name: Show workspace content after cache restore
-        run: dir /s
-        shell: cmd
-
-      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
 
@@ -72,11 +70,19 @@ jobs:
         run: echo "${{ github.workspace }}/ninja" >> $GITHUB_PATH
         shell: bash
 
+      - name: Verify Ninja installation
+        run: |
+          where ninja
+          ninja --version || exit 1
+        shell: cmd
+
       - name: Bootstrap vcpkg
         run: |
           if (!(Test-Path "${{ env.VCPKG_ROOT }}/vcpkg.exe")) {
             & "${{ env.VCPKG_ROOT }}/bootstrap-vcpkg.bat" -disableMetrics
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+          & "${{ env.VCPKG_ROOT }}/vcpkg.exe" version
         shell: pwsh
 
       - name: Debug environment
@@ -85,6 +91,9 @@ jobs:
           where cl
           ninja --version
           cl
+          echo "VCPKG_ROOT: ${{ env.VCPKG_ROOT }}"
+          echo "CMAKE_BUILD_DIR: ${{ env.CMAKE_BUILD_DIR }}"
+          dir "${{ env.VCPKG_ROOT }}"
         shell: cmd
         continue-on-error: true
 
@@ -96,6 +105,7 @@ jobs:
       - name: Install dependencies and generate project files
         run: |
           cmake -S "${{ github.workspace }}/src_repo" -B "${{ env.CMAKE_BUILD_DIR }}" -G "Ninja" \
+            -DCMAKE_MAKE_PROGRAM="${{ env.NINJA_PATH }}" \
             -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" \
             -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
             -DMODENGINE_DIST_SCYLLA=1 \
