@@ -3,7 +3,6 @@
 # SPDX short identifier: MIT
 
 # A GitHub workflow using CMake, Ninja and vcpkg.
-# It is called "pure" because it is an example which minimizes the usage of custom GitHub actions, but leverages directly the tools that could be easily run on your development machines (i.e. CMake, vcpkg, Ninja).
 name: hosted-pure-workflow
 on:
   push:
@@ -25,9 +24,7 @@ jobs:
           - os: windows-latest
             triplet: x64-windows
     env:
-      # Indicates the CMake build directory where project files and binaries are being produced.
       CMAKE_BUILD_DIR: ${{ github.workspace }}/builddir/
-      # Indicates the location of the vcpkg as a Git submodule of the project repository.
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
     steps:
@@ -41,58 +38,47 @@ jobs:
           repository: 'microsoft/vcpkg'
           path: vcpkg
           submodules: true
-          # Updated to a more recent version that should have better CLI11 support
           ref: "2024.11.16"
 
-      # Setup the build machine with the most recent versions of CMake and Ninja. Both are cached if not already: on subsequent runs both will be quickly restored from GitHub cache service.
       - uses: lukka/get-cmake@latest
-      
-      # Restore both vcpkg and its artifacts from the GitHub cache service.
-      - name: Restore vcpkg and its artifacts.
+
+      - name: Restore vcpkg and its artifacts
         uses: actions/cache@v4
         with:
-          # The first path is where vcpkg generates artifacts while consuming the vcpkg.json manifest file.
-          # The second path is the location of vcpkg (it contains the vcpkg executable and data files).
-          # The other paths starting with '!' are exclusions: they contain termporary files generated during the build of the installed packages.
           path: |
             ${{ env.CMAKE_BUILD_DIR }}/vcpkg_installed/
             ${{ env.VCPKG_ROOT }}
             !${{ env.VCPKG_ROOT }}/buildtrees
             !${{ env.VCPKG_ROOT }}/packages
             !${{ env.VCPKG_ROOT }}/downloads
-          # Updated cache key to include vcpkg version
-          key: |
-            ${{ hashFiles( 'src_repo/vcpkg.json' ) }}-${{ matrix.triplet }}-2024.11.16-v2
-      
-      - name: Show content of workspace after cache has been restored
-        run: find $RUNNER_WORKSPACE
-        shell: bash
-      
-      # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly. As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
+          key: vcpkg-${{ matrix.triplet }}-${{ hashFiles('src_repo/vcpkg.json') }}-2024.11.16-v3
+          restore-keys: |
+            vcpkg-${{ matrix.triplet }}-${{ hashFiles('src_repo/vcpkg.json') }}-
+
+      - name: Show workspace content after cache restore
+        run: dir /s
+        shell: cmd
+
       - uses: ilammy/msvc-dev-cmd@v1
-      
-      # Setup Ninja explicitly with a more recent version
+        with:
+          arch: x64
+
       - name: Setup Ninja
         uses: ashutoshvarma/setup-ninja@master
         with:
           version: 1.12.1
-      
-      # Bootstrap vcpkg if needed
+
+      - name: Add Ninja to PATH
+        run: echo "${{ github.workspace }}/ninja" >> $GITHUB_PATH
+        shell: bash
+
       - name: Bootstrap vcpkg
         run: |
           if (!(Test-Path "${{ env.VCPKG_ROOT }}/vcpkg.exe")) {
-            & "${{ env.VCPKG_ROOT }}/bootstrap-vcpkg.bat"
+            & "${{ env.VCPKG_ROOT }}/bootstrap-vcpkg.bat" -disableMetrics
           }
         shell: pwsh
-      
-      # Run CMake to generate Ninja project files, using the vcpkg's toolchain file to resolve and install the dependencies as specified in vcpkg.json.
 
-      - name: Download ScyllaHide
-        run: ./tools/setup-scylla.ps1
-        shell: pwsh
-        working-directory: "${{ github.workspace }}/src_repo"
-
-      # Debug step to check ninja and compiler availability
       - name: Debug environment
         run: |
           where ninja
@@ -102,11 +88,16 @@ jobs:
         shell: cmd
         continue-on-error: true
 
+      - name: Download ScyllaHide
+        run: ./tools/setup-scylla.ps1
+        shell: pwsh
+        working-directory: "${{ github.workspace }}/src_repo"
+
       - name: Install dependencies and generate project files
         run: |
-          # Use Visual Studio generator instead of Ninja to avoid ninja path issues
-          cmake -S "${{ github.workspace }}/src_repo" -B "${{ env.CMAKE_BUILD_DIR }}" -G "Visual Studio 17 2022" -A x64 \
+          cmake -S "${{ github.workspace }}/src_repo" -B "${{ env.CMAKE_BUILD_DIR }}" -G "Ninja" \
             -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} \
             -DMODENGINE_DIST_SCYLLA=1 \
             -DMODENGINE_CRASH_REPORT_URL=${{ secrets.MODENGINE_CRASH_REPORT_URL }} \
             -DCPACK_GENERATOR=ZIP \
@@ -116,17 +107,18 @@ jobs:
             -DVCPKG_INSTALL_OPTIONS=--debug
         shell: bash
 
-      - name: Build
+      - name: Build and package
         run: |
           cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target package --config MinSizeRel --verbose
-
-      - name: Show content of workspace at its completion
-        run: find $RUNNER_WORKSPACE
         shell: bash
 
-      - name: 'Upload artifacts'
+      - name: Show workspace content after build
+        run: dir /s
+        shell: cmd
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: 'modengine-${{ github.sha }}'
-          path: '${{ env.CMAKE_BUILD_DIR }}/ModEngine-*-win64.*' # FIXME gtierney: run-cmake isn't respecting CMAKE_INSTALL_PREFIX
+          name: modengine-${{ github.sha }}
+          path: ${{ env.CMAKE_BUILD_DIR }}/ModEngine-*.zip
         if: ${{ github.event_name == 'push' }}
