@@ -62,6 +62,7 @@ void ModLoaderExtension::on_attach()
     register_hook(ALL, &hooked_CreateFileW, kernel32_path.wstring(), "CreateFileW", tCreateFileW);
     register_hook(DS3, &hooked_virtual_to_archive_path_ds3, util::rva2addr(0x7d660), virtual_to_archive_path_ds3);
     register_hook(ELDEN_RING, &hooked_virtual_to_archive_path_eldenring, virtual_to_archive_path_er_aob, 0x0, virtual_to_archive_path_eldenring, SCAN_CALL_INST);
+    register_hook(NIGHTREIGN, &hooked_virtual_to_archive_path_eldenring, virtual_to_archive_path_er_aob, 0x0, virtual_to_archive_path_eldenring, SCAN_CALL_INST);
     register_hook(ARMORED_CORE_6, &hooked_virtual_to_archive_path_eldenring, virtual_to_archive_path_ac6_aob, 0x1, virtual_to_archive_path_eldenring, SCAN_CALL_INST);
     register_hook(ELDEN_RING, &hooked_ak_file_location_resolver_open, ak_file_location_resolver_open_aob, 0x1E, ak_file_location_resolver_open, SCAN_CALL_INST);
     register_hook(ARMORED_CORE_6, &hooked_ak_file_location_resolver_open, ak_file_location_resolver_open_aob, 0x1E, ak_file_location_resolver_open, SCAN_CALL_INST);
