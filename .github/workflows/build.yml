@@ -26,7 +26,6 @@ jobs:
     env:
       CMAKE_BUILD_DIR: ${{ github.workspace }}/builddir/
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-      NINJA_PATH: ${{ github.workspace }}/ninja/ninja.exe
 
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +51,7 @@ jobs:
             !${{ env.VCPKG_ROOT }}/buildtrees
             !${{ env.VCPKG_ROOT }}/packages
             !${{ env.VCPKG_ROOT }}/downloads
-          key: vcpkg-${{ matrix.triplet }}-${{ hashFiles('src_repo/vcpkg.json') }}-2024.11.16-v4
+          key: vcpkg-${{ matrix.triplet }}-${{ hashFiles('src_repo/vcpkg.json') }}-2024.11.16-v5
           restore-keys: |
             vcpkg-${{ matrix.triplet }}-${{ hashFiles('src_repo/vcpkg.json') }}-
 
@@ -66,8 +65,17 @@ jobs:
         with:
           version: 1.12.1
 
+      - name: Find Ninja executable
+        id: find_ninja
+        run: |
+          $ninja_path = (Get-Command ninja).Source
+          if (-not $ninja_path) { Write-Error "Ninja not found"; exit 1 }
+          echo "NINJA_PATH=$ninja_path" >> $env:GITHUB_ENV
+          echo "Ninja found at: $ninja_path"
+        shell: pwsh
+
       - name: Add Ninja to PATH
-        run: echo "${{ github.workspace }}/ninja" >> $GITHUB_PATH
+        run: echo "${{ env.NINJA_PATH | dirname }}" >> $GITHUB_PATH
         shell: bash
 
       - name: Verify Ninja installation
@@ -93,7 +101,9 @@ jobs:
           cl
           echo "VCPKG_ROOT: ${{ env.VCPKG_ROOT }}"
           echo "CMAKE_BUILD_DIR: ${{ env.CMAKE_BUILD_DIR }}"
+          echo "NINJA_PATH: ${{ env.NINJA_PATH }}"
           dir "${{ env.VCPKG_ROOT }}"
+          dir "${{ env.CMAKE_BUILD_DIR }}"
         shell: cmd
         continue-on-error: true
 
@@ -111,7 +121,6 @@ jobs:
             -DMODENGINE_DIST_SCYLLA=1 \
             -DMODENGINE_CRASH_REPORT_URL=${{ secrets.MODENGINE_CRASH_REPORT_URL }} \
             -DCPACK_GENERATOR=ZIP \
-            -DVCPKG_OVERLAY_PORTS="${{ github.workspace }}/src_repo/third-party/vcpkg-overlays" \
             -DCMAKE_BUILD_TYPE=MinSizeRel \
             -DVCPKG_VERBOSE=ON \
             -DVCPKG_INSTALL_OPTIONS=--debug
